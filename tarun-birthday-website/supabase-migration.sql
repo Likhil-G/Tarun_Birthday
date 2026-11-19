@@ -32,18 +32,25 @@ CREATE INDEX IF NOT EXISTS idx_birthday_answers_submission_id
 CREATE INDEX IF NOT EXISTS idx_birthday_submissions_submitted_at 
     ON birthday_submissions(submitted_at DESC);
 
--- 5. Enable Row Level Security (RLS) on both tables
+-- 5. Explicit Table Grants for Supabase service_role, postgres, and authenticated
+GRANT ALL ON TABLE birthday_submissions TO service_role;
+GRANT ALL ON TABLE birthday_answers TO service_role;
+GRANT ALL ON TABLE birthday_submissions TO postgres;
+GRANT ALL ON TABLE birthday_answers TO postgres;
+
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO service_role;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO postgres;
+
+-- 6. Enable Row Level Security (RLS) on both tables
 ALTER TABLE birthday_submissions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE birthday_answers ENABLE ROW LEVEL SECURITY;
 
--- 6. RLS Policies: Restrict access completely from anonymous / public users
--- Drop any existing policies to avoid conflicts
+-- 7. RLS Policies: Allow service_role full access, deny public direct read
 DROP POLICY IF EXISTS "Service role full access on submissions" ON birthday_submissions;
 DROP POLICY IF EXISTS "Service role full access on answers" ON birthday_answers;
 DROP POLICY IF EXISTS "Deny public select on submissions" ON birthday_submissions;
 DROP POLICY IF EXISTS "Deny public select on answers" ON birthday_answers;
 
--- Only service_role (used by Vercel serverless backend) can access the data
 CREATE POLICY "Service role full access on submissions"
     ON birthday_submissions
     TO service_role
@@ -56,7 +63,7 @@ CREATE POLICY "Service role full access on answers"
     USING (true)
     WITH CHECK (true);
 
--- 7. Atomic Transaction Procedure: submit_birthday_interview
+-- 8. Atomic Transaction Procedure: submit_birthday_interview
 -- Ensures all 27 answers and parent submission are saved atomically.
 -- If any answer fails or is missing, the entire transaction rolls back.
 CREATE OR REPLACE FUNCTION submit_birthday_interview(
@@ -134,5 +141,6 @@ EXCEPTION WHEN OTHERS THEN
 END;
 $$;
 
--- Grant execution permission on the function to service_role
+-- Grant execution permission on the function to service_role and postgres
 GRANT EXECUTE ON FUNCTION submit_birthday_interview(TEXT, TEXT[], TEXT[]) TO service_role;
+GRANT EXECUTE ON FUNCTION submit_birthday_interview(TEXT, TEXT[], TEXT[]) TO postgres;

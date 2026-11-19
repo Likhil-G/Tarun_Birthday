@@ -171,9 +171,16 @@ module.exports = async function handler(req, res) {
 
     if (subError || !subData) {
       console.error('Error creating submission record:', subError);
+      let userFriendlyError = subError ? subError.message : 'Unknown error';
+      if (subError && (subError.code === 'PGRST205' || String(userFriendlyError).includes('schema cache') || String(userFriendlyError).includes('does not exist'))) {
+        userFriendlyError = "Database tables are not created yet in Supabase! Please open your Supabase Dashboard -> SQL Editor and run the supabase-migration.sql script once to create the tables.";
+      } else if (subError && (subError.code === '42501' || String(userFriendlyError).includes('permission denied'))) {
+        userFriendlyError = "Permission denied in Supabase. Please open your Supabase Dashboard -> SQL Editor and run the GRANT statements from supabase-migration.sql (GRANT ALL ON TABLE birthday_submissions, birthday_answers TO service_role;).";
+      }
       return res.status(500).json({
         ok: false,
-        error: `Database error while creating submission: ${subError ? subError.message : 'Unknown error'}`
+        code: (subError && subError.code) || 'DB_ERROR',
+        error: userFriendlyError
       });
     }
 
@@ -198,9 +205,14 @@ module.exports = async function handler(req, res) {
       // Atomic cleanup: delete parent submission so no partial data remains
       await supabase.from('birthday_submissions').delete().eq('id', submissionId);
 
+      let userFriendlyError = ansError.message || 'Unknown error';
+      if (ansError.code === '42501' || String(userFriendlyError).includes('permission denied')) {
+        userFriendlyError = "Permission denied for birthday_answers table in Supabase. Please run: GRANT ALL ON TABLE birthday_answers TO service_role;";
+      }
+
       return res.status(500).json({
         ok: false,
-        error: `Database error while saving answers: ${ansError.message}. Submission rolled back.`
+        error: `Database error while saving answers: ${userFriendlyError}. Submission rolled back.`
       });
     }
 
