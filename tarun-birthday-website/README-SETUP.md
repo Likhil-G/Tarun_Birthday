@@ -1,96 +1,96 @@
 # The Tarun Times — A Romantic Birthday Experience
 ### *"A Love Letter Disguised as a Birthday Newspaper"*
 
-A beautifully redesigned, emotionally engaging romantic birthday experience created by a girlfriend for her boyfriend, Tarun Chandra, on his 28th Golden Birthday.
+A beautifully designed, emotionally engaging romantic birthday experience created by a girlfriend for her boyfriend, Tarun Chandra, on his 28th Golden Birthday.
 
 ---
 
-## 🌹 What’s Inside This Experience
+## 🏗️ Architecture: Vercel + Supabase PostgreSQL
 
-1. **Romantic Invitation Welcome Screen:**
-   - Handwritten label: *"Made with love, especially for you"*
-   - Masthead: *"The Tarun Times · The Love Edition · Vol. 28"*
-   - Emotional Headline: *"27 Questions for My Favourite Person"*
-   - Subtitle: *"27 little questions, countless memories, and one surprise waiting just for you."*
-   - Editorial Golden Year Medallion (Tarun's 28th birthday tribute)
-   - Personal love note: *"Take your time, birthday boy. Every answer means something to me."*
-   - Ambient floating hearts drifting gently across the warm ivory background.
-
-2. **Personalized 27-Question Interactive Interview:**
-   - Soft pink/ivory card with champagne gold and dusty rose accents.
-   - Large serif question numbers (`01` to `27`).
-   - Category badge: `"A LITTLE QUESTION FROM YOUR GIRL ❤️"`
-   - Spacious answer stationery with romantic placeholder: `"Tell me what was going through your mind... ❤️"`
-   - Smooth animated card transitions between questions.
-   - Dual-toned progress bar with an animated glowing heart pin tracking completion.
-   - Real-time autosave to `localStorage` (no lost answers if the browser refreshes).
-   - Previous and Next navigation, with `Ctrl+Enter` shortcut support.
-   - Preserves all 27 original questions in their exact order.
-
-3. **Emotional Completion Screen:**
-   - Crimson wax seal emblem with keepsake statistics.
-   - Heading: *"You made it through all 27 questions! ❤️"*
-   - Heartfelt message thanking him for opening his heart and reliving memories.
-   - Prominent *"Unlock Your Birthday Surprise ❤️"* button.
-
-4. **Multi-Stage Surprise Reveal & Final Poster:**
-   - Emotional transition screen: *"A little surprise for you..."* with a pulsing heart.
-   - Zoom and fade reveal animation into the final keepsake screen.
-   - Shower of celebratory hearts and champagne gold confetti.
-   - Prominently showcases the exact original poster: `The Tarun Times.pdf` / `tarun-times-poster.png`.
-   - Final loving sign-off:
-     > *"Happy 28th Birthday, Tarun ❤️"*
-     > *"You are my favourite story, my happiest chapter and the person I want to celebrate every year."*
-     > *"The man I love forever."*
-   - Download options for both PDF and high-resolution PNG.
-   - Built-in Fullscreen Lightbox for zooming in and reading every newspaper article comfortably on mobile and desktop.
+- **Frontend**: Vanilla HTML5, CSS3 & JavaScript (No heavy frameworks, romantic typography & micro-interactions).
+- **Hosting**: Vercel.
+- **Serverless Backend**: Vercel Serverless Function at `api/submit.js` (`POST /api/submit`).
+- **Database**: Supabase PostgreSQL with Row Level Security (RLS) and atomic transaction guarantees.
 
 ---
 
-## 🎨 Color Palette & Typography
+## 🗄️ Database Tables (Supabase)
 
-- **Warm Ivory:** `#FFF8F2` (Background)
-- **Deep Wine:** `#873B4B` (Primary CTA & Brand)
-- **Dusty Rose:** `#C98591` (Secondary Accents & Borders)
-- **Champagne Gold:** `#C5A16C` (Ornamental rules, badges, and glows)
-- **Dark Chocolate:** `#352A2A` (Text & high readability)
-- **Card Background:** `#FFFCF9`
-- **Soft Pink:** `#F6E5E5`
-- **Typography:** *Playfair Display* (Headings), *Cormorant Garamond* (Editorial & Prompts), *Inter* (Buttons & UI), *Alex Brush* (Handwritten script notes).
+### Table 1: `birthday_submissions`
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `UUID` | `PRIMARY KEY DEFAULT gen_random_uuid()` | Unique Submission Identifier |
+| `respondent_name` | `TEXT` | `NOT NULL` | Name of the respondent (`Tarun Chandra`) |
+| `submitted_at` | `TIMESTAMPTZ` | `DEFAULT NOW()` | Submission timestamp with timezone |
+| `status` | `TEXT` | `DEFAULT 'COMPLETED'` | Status flag |
+
+### Table 2: `birthday_answers`
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `UUID` | `PRIMARY KEY DEFAULT gen_random_uuid()` | Unique Answer Identifier |
+| `submission_id` | `UUID` | `REFERENCES birthday_submissions(id) ON DELETE CASCADE` | Foreign Key to parent submission |
+| `question_number` | `INTEGER` | `NOT NULL` | Sequential number (1 to 27) |
+| `question_text` | `TEXT` | `NOT NULL` | Exact wording of the question |
+| `answer_text` | `TEXT` | `NOT NULL` | Tarun's heartfelt answer |
+| `created_at` | `TIMESTAMPTZ` | `DEFAULT NOW()` | Record creation timestamp |
+
+- **Security & Integrity**:
+  - `UNIQUE (submission_id, question_number)` prevents duplicate answers per question.
+  - Row Level Security (RLS) is enabled on both tables.
+  - Anonymous users are completely blocked from reading or altering stored answers.
+  - Only the Vercel serverless function (authenticated via `SUPABASE_SERVICE_ROLE_KEY`) can insert or query answers.
+  - Database function `submit_birthday_interview(p_respondent_name, p_questions, p_answers)` wraps all 27 inserts into an atomic transaction: if any answer fails, everything rolls back automatically.
 
 ---
 
-## 💌 Setup & Publishing Guide
+## 🚀 Setup & Deployment Guide
 
-### Step 1: Connect Google Sheets (Keepsake Workbook)
-1. Create a new Google Sheet (e.g. name it *Tarun's 28th Birthday Keepsake*).
-2. In the Google Sheet, go to **Extensions → Apps Script**.
-3. Replace the code in `Code.gs` with the entire content of `google-apps-script.gs`.
-4. Choose a secret passphrase of your choice.
-5. In `google-apps-script.gs`, replace `CHANGE_THIS_TO_A_LONG_RANDOM_SECRET` with your secret passphrase.
-6. Click **Deploy → New deployment**.
-   - Type: **Web app**
-   - Execute as: **Me**
-   - Who has access: **Anyone**
-7. Click **Deploy**, authorize permissions, and copy the Web App URL (ending in `/exec`).
-8. Set your credentials in the separate environment file **`.env`** (or **`env.js`**):
+### Step 1: Create Supabase Tables
+1. Open your Supabase Dashboard: [https://supabase.com/dashboard](https://supabase.com/dashboard).
+2. Go to the **SQL Editor** tab (left sidebar).
+3. Copy the entire contents of [`supabase-migration.sql`](./supabase-migration.sql) and paste it into the editor.
+4. Click **Run**. Both tables, indexes, RLS policies, and the atomic stored procedure will be created instantly.
+
+### Step 2: Configure Environment Variables
+1. In your Supabase Project, go to **Project Settings → API**.
+2. Copy the **Project URL** and the **`service_role` (secret)** key.
+3. In **Vercel**:
+   - Go to your Project on Vercel: **Settings → Environment Variables**.
+   - Add:
+     - `SUPABASE_URL`: `https://your-project-id.supabase.co`
+     - `SUPABASE_SERVICE_ROLE_KEY`: `your-service-role-secret-key`
+   - Select Environments: **Production**, **Preview**, and **Development**.
+4. In your local development `.env`:
    ```env
-   GOOGLE_APPS_SCRIPT_URL=https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec
-   SHARED_SECRET=YOUR_SECRET_PASSPHRASE
+   SUPABASE_URL=https://your-project-id.supabase.co
+   SUPABASE_SERVICE_ROLE_KEY=your-service-role-secret-key
    ```
-*(Note: If you preview the site before adding the URL, it automatically runs in Preview Mode so you can inspect the full questionnaire and surprise reveal without errors).*
 
-### Step 2: Preview Locally
-Run a local static server from the project directory:
+### Step 3: Run Locally
+Do **not** use Python's built-in `http.server` (it returns `501 Unsupported method` for POST requests).
+
+Use Vercel CLI or npm:
 ```bash
-python -m http.server 8080
+# Option A: Run with Vercel CLI (matches production serverless environment)
+npx vercel dev
+
+# Option B: Run with the included Node.js server
+npm start
 ```
-Open `http://localhost:8080` in any browser or on your phone connected to the same Wi-Fi.
+Open `http://localhost:8080` (or `http://localhost:3000` with Vercel CLI).
 
-### Step 3: Deploy & Share with Tarun
-Deploy the static website to:
-- **Netlify:** Drag and drop the `tarun-birthday-website` folder into [Netlify Drop](https://app.netlify.com/drop).
-- **Vercel:** Import this folder as a static project.
-- **GitHub Pages:** Push to GitHub and enable Pages on the repository.
+### Step 4: Deploy to Vercel
+Deploy with Git or the Vercel CLI:
+```bash
+vercel --prod
+```
+The Vercel Serverless Function at `api/submit.js` will automatically deploy, handle `POST /api/submit`, store all 27 records into Supabase PostgreSQL atomically, and unlock Tarun's surprise poster.
 
-Once deployed, send Tarun the link and let him experience his birthday surprise! ❤️
+---
+
+## 🧪 Run Integration Tests
+
+Run the full automated test suite verifying all 10 integration requirements:
+```bash
+npm test
+```

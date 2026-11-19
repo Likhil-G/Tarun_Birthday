@@ -285,9 +285,13 @@ $("backToLast").addEventListener("click", () => {
   renderQuestion(false);
 });
 
-// Review Screen: Submit to Google Sheets and Unlock Surprise
+// Review Screen: Submit to Supabase PostgreSQL and Unlock Surprise
+let isSubmitting = false;
+
 $("submitBtn").addEventListener("click", async () => {
-  // Validate that all 27 questions have answers
+  if (isSubmitting) return; // Prevent duplicate submissions
+
+  // 1. Validate that all 27 questions have non-empty answers
   const missingIndex = QUESTIONS.findIndex((q, i) => !(answers[i] || "").trim());
   if (missingIndex !== -1) {
     current = missingIndex;
@@ -300,62 +304,59 @@ $("submitBtn").addEventListener("click", async () => {
     return;
   }
 
+  isSubmitting = true;
   const btn = $("submitBtn");
   const status = $("submitStatus");
   btn.disabled = true;
   btn.classList.remove("pulse-button");
-  btn.innerHTML = '<span class="btn-text">Sending your answers with love… ♡</span>';
+  btn.innerHTML = '<span class="btn-text">Saving your answers with love… ♡</span>';
   status.className = "submit-status-banner";
-  status.textContent = "Connecting to our private keepsake sheet…";
+  status.textContent = "Connecting to database…";
 
-  const cfg = (window.envPromise ? await window.envPromise : window.BIRTHDAY_CONFIG) || {};
-
-  // Check if Google Apps Script URL is configured
-  if (!cfg.googleAppsScriptUrl || cfg.googleAppsScriptUrl.trim() === "") {
-    // If not configured, explain in status and trigger preview reveal
-    status.className = "submit-status-banner";
-    status.textContent = "Note: Google Sheets URL is not connected yet in config.js. Unlocking your surprise in preview mode…";
-    setTimeout(() => {
-      triggerMultiStageReveal();
-    }, 900);
-    return;
-  }
-
-  // Build payload for Google Apps Script receiver
+  // Target schema payload as specified
   const payload = {
-    token: cfg.sharedSecret || "CHANGE_THIS_TO_A_LONG_RANDOM_SECRET",
-    respondent: "Tarun Chandra",
-    submittedAt: new Date().toISOString(),
+    respondent_name: "Tarun Chandra",
     questions: QUESTIONS,
     answers: QUESTIONS.map((q, i) => (answers[i] || "").trim())
   };
 
   try {
-    // Google Apps Script requires no-cors mode for cross-origin web app execution
-    await fetch(cfg.googleAppsScriptUrl, {
+    const endpoint = (window.location && window.location.origin) ? `${window.location.origin}/api/submit` : '/api/submit';
+    
+    const response = await fetch(endpoint, {
       method: "POST",
-      mode: "no-cors",
       headers: {
-        "Content-Type": "text/plain;charset=utf-8"
+        "Content-Type": "application/json"
       },
       body: JSON.stringify(payload)
     });
 
-    status.className = "submit-status-banner success";
-    status.textContent = "Answers saved forever to the keepsake sheet! Preparing your surprise… ❤️";
-    
-    // Trigger multi-stage reveal animation
-    setTimeout(() => {
-      triggerMultiStageReveal();
-    }, 800);
+    const result = await response.json().catch(() => ({}));
+
+    if (response.ok && result.ok) {
+      status.className = "submit-status-banner success";
+      status.textContent = `All 27 answers confirmed and safely stored in the database! Preparing your surprise… ❤️`;
+
+      // Unlock surprise after confirmed database persistence
+      setTimeout(() => {
+        isSubmitting = false;
+        triggerMultiStageReveal();
+      }, 850);
+
+    } else {
+      const errMsg = (result && result.error) || `Server error (${response.status}): Could not save answers.`;
+      throw new Error(errMsg);
+    }
 
   } catch (err) {
     console.error("Submission error:", err);
-    status.className = "submit-status-banner error";
-    status.textContent = "We couldn't reach the keepsake sheet. Your answers remain safely saved on this device. Please check your connection and try again.";
+    isSubmitting = false; // Allow retry
     btn.disabled = false;
     btn.classList.add("pulse-button");
     btn.innerHTML = '<span class="btn-text">Try Again &amp; Unlock Surprise ❤️</span>';
+    status.className = "submit-status-banner error";
+    status.textContent = err.message || "Could not save your answers to the database. Your answers are safely preserved on this device. Please check your connection and try again.";
+    // Notice: Local storage answers are never deleted or corrupted!
   }
 });
 

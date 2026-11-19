@@ -1,0 +1,27 @@
+{
+  "name": "the-tarun-times",
+  "version": "1.0.0",
+  "description": "The Tarun Times – 27 Questions for the Birthday Boy (A Romantic Birthday Experience)",
+  "main": "api/submit.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "vercel dev",
+    "build": "echo 'Static build ready'",
+    "test": "node tests/test-supabase-migration.js"
+  },
+  "keywords": [
+    "birthday",
+    "romantic",
+    "tarun-times",
+    "supabase",
+    "vercel"
+  ],
+  "author": "With all my love",
+  "license": "ISC",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.119.1"
+  },
+  "devDependencies": {
+    "vercel": "^41.7.8"
+  }
+}

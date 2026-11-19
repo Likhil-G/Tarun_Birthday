@@ -72,6 +72,9 @@ global.document = {
 };
 
 global.window = {
+  location: {
+    origin: "http://localhost:8080"
+  },
   scrollTo: () => {},
   BIRTHDAY_CONFIG: {
     googleAppsScriptUrl: "",
