@@ -1,0 +1,36 @@
+/**
+ * Vercel Static Build Script
+ * Ensures all static assets are synchronized into the public/ directory
+ * for Vercel production deployments.
+ */
+const fs = require('fs');
+const path = require('path');
+
+const publicDir = path.join(__dirname, 'public');
+
+if (!fs.existsSync(publicDir)) {
+  fs.mkdirSync(publicDir, { recursive: true });
+}
+
+const files = [
+  'index.html',
+  'styles.css',
+  'app.js',
+  'questions.json'
+];
+
+files.forEach(file => {
+  const src = path.join(__dirname, file);
+  const dest = path.join(publicDir, file);
+  if (fs.existsSync(src)) {
+    fs.copyFileSync(src, dest);
+  }
+});
+
+const srcAssets = path.join(__dirname, 'assets');
+const destAssets = path.join(publicDir, 'assets');
+if (fs.existsSync(srcAssets)) {
+  fs.cpSync(srcAssets, destAssets, { recursive: true, force: true });
+}
+
+console.log('Build completed: Static assets synchronized to public/ directory.');
